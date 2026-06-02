@@ -1,0 +1,86 @@
+-- 1. Crear la Base de Datos
+CREATE DATABASE devops_suite;
+GO
+
+USE devops_suite;
+GO
+
+-- ========================================================
+-- TABLAS COMUNES Y CONFIGURACIÓN (Usuarios y Tareas)
+-- ========================================================
+
+CREATE TABLE usuario (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    rol VARCHAR(30) NOT NULL CHECK (rol IN ('DESARROLLADOR', 'ADMINISTRADOR'))
+);
+
+CREATE TABLE tarea_modulo (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('TAREA', 'TARJETA', 'MODULO')),
+    fecha DATE NOT NULL
+);
+
+-- Insertar Datos Semilla para Pruebas
+INSERT INTO usuario (nombre, email, rol) VALUES 
+('Carlos Mendoza', 'carlos@dev.com', 'DESARROLLADOR'),
+('Ana Gomez', 'ana@dev.com', 'DESARROLLADOR'),
+('Luis Torrez', 'luis@admin.com', 'ADMINISTRADOR');
+
+INSERT INTO tarea_modulo (nombre, descripcion, tipo, fecha) VALUES 
+('Login System', 'Implementacion de OAuth2', 'MODULO', CAST(GETDATE() AS DATE)),
+('Bug #404', 'Error de redireccion en pasarela', 'TARJETA', CAST(GETDATE() AS DATE)),
+('Refactor DB', 'Optimizar indices de base de datos', 'TAREA', CAST(GETDATE() AS DATE));
+
+-- ========================================================
+-- HISTORIA DE USUARIO 1: VALIDACIÓN AUTOMÁTICA DE PRUEBAS
+-- ========================================================
+
+CREATE TABLE merge_request (
+    id_merge VARCHAR(50) PRIMARY KEY,
+    rama_origen VARCHAR(100) NOT NULL,
+    rama_destino VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    fecha_solicitud DATE NOT NULL,
+    estado VARCHAR(30) DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE', 'EN_VALIDACION', 'EXITOSO', 'FALLIDO', 'RECHAZADO'))
+);
+
+CREATE TABLE historial_validacion (
+    id_historial INT IDENTITY(1,1) PRIMARY KEY,
+    id_merge VARCHAR(50) NOT NULL,
+    fecha DATETIME NOT NULL,
+    resultado_pruebas TEXT NOT NULL,
+    id_desarrollador INT NOT NULL,
+    estado_validacion VARCHAR(30) NOT NULL CHECK (estado_validacion IN ('EN_PROCESO', 'EXITOSO', 'FALLIDO', 'CANCELADO')),
+    mensaje VARCHAR(255),
+    FOREIGN KEY (id_merge) REFERENCES merge_request(id_merge),
+    FOREIGN KEY (id_desarrollador) REFERENCES usuario(id)
+);
+
+-- Datos Semilla para US1
+INSERT INTO merge_request (id_merge, rama_origen, rama_destino, descripcion, fecha_solicitud, estado) VALUES
+('MR-001', 'feature-login', 'main', 'Anade validaciones de login', CAST(GETDATE() AS DATE), 'PENDIENTE'),
+('MR-002', 'fix-db-leak', 'main', 'Corrige fuga de conexiones', CAST(GETDATE() AS DATE), 'PENDIENTE');
+
+-- ========================================================
+-- HISTORIA DE USUARIO 2: SESIONES DE PAIR PROGRAMMING
+-- ========================================================
+
+CREATE TABLE sesion_pair_programming (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    id_programador1 INT NOT NULL,
+    id_programador2 INT NOT NULL,
+    fecha DATE NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    descripcion TEXT NOT NULL,
+    id_tarea INT NOT NULL,
+    fecha_creacion DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (id_programador1) REFERENCES usuario(id),
+    FOREIGN KEY (id_programador2) REFERENCES usuario(id),
+    FOREIGN KEY (id_tarea) REFERENCES tarea_modulo(id)
+);
+GO
